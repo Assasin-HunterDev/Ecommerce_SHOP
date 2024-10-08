@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+// use App\Events\AdminLoginAlert as EventsAdminLoginAlert;
+// use App\Jobs\SendEmailJobs;
+// use App\Mail\AdminLoginAlert;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -9,31 +12,27 @@ use Illuminate\Support\Facades\Auth;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 
+
+use Illuminate\Support\Facades\Mail;
+
 class AdminController extends Controller
-{  
+{
     use AuthenticatesUsers;
 
-    protected $redirectTo = '/admin';
+    // protected $redirectTo = '/admin';
     public function __construct()
     {
-        $this->middleware('guest');
-        $this->middleware('guest:admin');
+        $this->middleware('guest')->except('logout');
+        // $this->middleware('guest:admin')->except('logout');
 
     }
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
+
+    public function getContent()
     {
-        //
+        return \view('admin_layout');
     }
-    
-    public function getLoginForm()
-    {
-        return \view('admin_login');
-    }
+
+
     protected function createAdmin(Request $request)
     {
         $this->validator($request->all())->validate();
@@ -44,14 +43,26 @@ class AdminController extends Controller
         ]);
         return redirect()->intended('login/admin');
     }
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
+
+    public function logout()
     {
-        //
+        try {
+            Auth::guard('admin')->user()->logout();
+            // session()->flush();
+            return response()->json([
+                'success' => true ,
+                'message' => 'Admin Logout Successfully'
+            ], 200);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false ,
+                'message' => 'Admin Logout Failed'
+            ], 401);
+        }
+    }
+    protected function guard(){
+        return Auth::guard('admin');
     }
 
     /**
@@ -66,57 +77,34 @@ class AdminController extends Controller
             'email'   => 'required|email',
             'password' => 'required|min:6'
         ]);
-
-        if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password], $request->get('remember'))) {
-
-            return redirect()->intended('/admin');
+        $hasAccount = Admin::where('email',$request->email)->first();
+        if (!$hasAccount) {
+            return response()->json([
+                'errors' => [
+                    'email' => ['There has no account with this email']
+                ]
+            ] , 422);
         }
-        return back()->withInput($request->only('email', 'remember'));
-        
+
+        if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password], $request->remember)) {
+            // email me /
+            $admin = Auth::guard('admin')->user();
+            // event(new EventsAdminLoginAlert($admin));
+            // dispatch(new SendEmailJobs($admin));
+            return response()->json([
+                'success' => true ,
+                'message' => 'Admin Login Successfully',
+                'user' => $admin
+            ], 200);
+        }
+        return response()->json([
+            'errors' => [
+                'password' => ['Your Password is incorrect']
+            ]
+        ] , 422);
+
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Admin  $admin
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Admin $admin)
-    {
-        //
-    }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Admin  $admin
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Admin $admin)
-    {
-        //
-    }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Admin  $admin
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Admin $admin)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Admin  $admin
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Admin $admin)
-    {
-        //
-    }
 }
