@@ -165,7 +165,7 @@ return [
         /*
          * Package Service Providers...
          */
-
+        Penguin\Bread\BreadServiceProvider::class,
         /*
          * Application Service Providers...
          */
@@ -174,7 +174,9 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-
+        // Manual Service Load
+        // Intervention\Image\ImageServiceProvider::class
+        App\Providers\RepositoryServiceProvider::class,
     ],
 
     /*
@@ -226,7 +228,8 @@ return [
         'URL' => Illuminate\Support\Facades\URL::class,
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
-
+        // 'Image' => Intervention\Image\Facades\Image::class,
+        // 'Cart' => 'Melihovv\ShoppingCart\Facades\ShoppingCart'
     ],
 
 ];

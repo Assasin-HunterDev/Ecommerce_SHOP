@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+// use App\Events\AdminLoginAlert as EventsAdminLoginAlert;
+// use App\Jobs\SendEmailJobs;
+// use App\Mail\AdminLoginAlert;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -9,8 +12,11 @@ use Illuminate\Support\Facades\Auth;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 
+
+use Illuminate\Support\Facades\Mail;
+
 class AdminController extends Controller
-{  
+{
     use AuthenticatesUsers;
 
     // protected $redirectTo = '/admin';
@@ -20,16 +26,13 @@ class AdminController extends Controller
         // $this->middleware('guest:admin')->except('logout');
 
     }
-    
+
     public function getContent()
     {
         return \view('admin_layout');
     }
-    
-    public function getLoginForm()
-    {
-        return \view('admin_login');
-    }
+
+
     protected function createAdmin(Request $request)
     {
         $this->validator($request->all())->validate();
@@ -60,7 +63,7 @@ class AdminController extends Controller
     }
     protected function guard(){
         return Auth::guard('admin');
-    } 
+    }
 
     /**
      * Store a newly created resource in storage.
@@ -71,22 +74,35 @@ class AdminController extends Controller
     public function login(Request $request)
     {
         $this->validate($request, [
-            'email'   => 'bail|required|email',
-            'password' => 'bail|required|min:6'
+            'email'   => 'required|email',
+            'password' => 'required|min:6'
         ]);
+        $hasAccount = Admin::where('email',$request->email)->first();
+        if (!$hasAccount) {
+            return response()->json([
+                'errors' => [
+                    'email' => ['There has no account with this email']
+                ]
+            ] , 422);
+        }
 
-        if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password], $request->get('remember'))) {
-
+        if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password], $request->remember)) {
+            // email me /
+            $admin = Auth::guard('admin')->user();
+            // event(new EventsAdminLoginAlert($admin));
+            // dispatch(new SendEmailJobs($admin));
             return response()->json([
                 'success' => true ,
                 'message' => 'Admin Login Successfully',
-                'user' => Auth::guard('admin')->user()
+                'user' => $admin
             ], 200);
         }
         return response()->json([
-            'error' => 'Your Email or Password is incorrect'
-        ] , 401);
-        
+            'errors' => [
+                'password' => ['Your Password is incorrect']
+            ]
+        ] , 422);
+
     }
 
 
